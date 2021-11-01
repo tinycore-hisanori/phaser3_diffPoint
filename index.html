@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <meta name="viewport"
+        content="width = device-width, initial-scale = 1.0, minimum-scale = 1, maximum-scale = 1, user-scalable = no, viewport-fit=cover,minimal-ui" />
+    <title></title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.55.2/dist/phaser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/matter-js@0.17.1/build/matter.min.js"></script>
+       
+    <script src="https://cdn.jsdelivr.net/npm/howler@2.2.3/dist/howler.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/localforage@1.10.0/dist/localforage.min.js"></script>
+</head>
+
+<style type="text/css">
+    body {
+        background-color: black;
+        min-height: 100vh;
+        min-width: 100vw;
+        height: 100%;
+        width: 100vw;
+        margin: auto;
+    }
+
+    #container {
+        position: absolute;
+        overflow: hidden;
+    }
+</style>
+
+<body>
+    <script>
+
+        var bgm = new Howl({
+            src: ['timer.mp3'],
+            loop: true
+        });
+
+        var bgmOver = new Howl({
+            src: ['gameover.mp3']
+        });
+
+        var bgmClear = new Howl({
+            src: ['clear.mp3']
+        });
+
+
+        var seShoot = new Howl({
+            src: ['shoot.mp3']
+        });
+
+
+        var bDebugFlag = false;
+        var bgObject, changingText, bgTween, currentTimeBar, currentAnsArea;
+        var btnReturn, clickButton;
+        var gameWidth = 720;
+        var gameHeight = 1280;
+        var currentScene = null;
+
+        var bGame = false;
+        var stageLocks = [0, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
+        var currentStageNo = 0;
+
+        function doGameOver() {
+            bGame = false;
+            if (bgm != null) {
+                bgm.stop();
+            }
+            staticText.text = "   GAME OVER   ";
+            btnReturn.visible = true;
+            bgmOver.play();
+        }
+
+        function doGoal() {
+            if (bGame == true) {
+                bGame = false;
+                if (bgm != null) {
+                    bgm.stop();
+                }
+                bgmClear.play();
+                staticText.text = "  GAME CLEAR!!  ";
+                btnReturn.visible = true;
+
+                //Next Stage UnLock
+                if (currentStageNo < stageLocks.length) {
+                    if (stageLocks[currentStageNo] == 1) {
+                        stageLocks[currentStageNo] = 0;
+                        localforage.setItem("diffPointStageUnlock", stageLocks);
+                    }
+                }
+            }
+        }
+
+        function onComplete() {
+            bGame = true;
+            changingText.visible = false;
+            staticText.visible = true;
+            currentTimeBar = new timeBar(currentScene, 10, 10);
+
+            if (bgm != null) {
+                bgm.play();
+            }
+        }
+
+        
+        function startChange(_src, _dst) {
+            currentScene.add
+                .tileSprite(0, 0, gameWidth, gameHeight, _src)
+                .setOrigin(0)
+                .setScrollFactor(0);
+
+            bgObject = currentScene.add
+                .tileSprite(0, 0, gameWidth, gameHeight, _dst)
+                .setOrigin(0)
+                .setScrollFactor(0);
+
+            bgTween = currentScene.tweens.add({
+                targets: bgObject,
+                alpha: { from: 0, to: 1 },
+                onComplete: onComplete,
+                ease: 'Linear',
+                duration: 3000,
+                repeat: 0,
+                yoyo: false
+            });
+
+            changingText = currentScene.add
+                .text(100, 100, "Now Changing....")
+                .setStroke("#0000ff", 4)
+                .setBackgroundColor("#333333")
+                .setFontSize("60px")
+                .setColor("#0f0");
+            currentScene.tweens.add({
+                targets: changingText,
+                alpha: 0.1,
+                ease: 'Cubic.easeOut',
+                duration: 500,
+                repeat: -1,
+                yoyo: true
+            });
+
+            staticText = currentScene.add
+                .text(100, 100, "Touch different!")
+                .setStroke("#AAAA00", 4)
+                .setBackgroundColor("#666666")
+                .setFontSize("60px")
+                .setColor("#AAAA00");
+            staticText.visible = false;
+
+        }
+
+        function initScene() {
+            txtEnding = currentScene.add
+                .text(200, 100, "")
+                .setScrollFactor(0)
+                .setFontSize(46)
+                .setColor("#ff0");
+
+            btnReturn = currentScene.add
+                .text(gameWidth / 2 - 100, 400, " BACK ")
+                .setScrollFactor(0)
+                .setFontSize(46)
+                .setColor("#ff0")
+                .setBackgroundColor("#aa5500")
+                .setInteractive();
+            btnReturn.on(
+                "pointerdown",
+                () => {
+                    if (bgm != null) {
+                        bgm.stop();
+                    }
+                    if (bgmOver != null) {
+                        bgmOver.stop();
+                    }
+                    currentScene.scene.start("stageSelectScene");
+                },
+                this);
+            btnReturn.visible = false;
+
+            if (currentAnsArea != null) {
+                currentAnsArea.destroy();
+            }
+            switch (currentStageNo) {
+                case 1://Stage1 Answer Area
+                    currentAnsArea = new answerArea(currentScene, 180, 500, 80, 80, bDebugFlag);
+                    break;
+                case 2://Stage2 Answer Area
+                    currentAnsArea = new answerArea(currentScene, 660, 600, 80, 70, bDebugFlag);
+                    break;
+                case 3://Stage3 Answer Area
+                    currentAnsArea = new answerArea(currentScene, 620, 1130, 80, 70, bDebugFlag);
+                    break;
+            }
+        }
+
+        function doGameOverCheck() {
+            if (bGame == true) {
+                if (currentTimeBar.remainValue == 0) {
+                    doGameOver();
+                }
+            }
+        }
+
+
+        class answerArea extends Phaser.GameObjects.Rectangle {
+            constructor(scene, x, y, _width, _height, _debug) {
+                super(scene, x, y, _width, _height, 0x6666ff).setOrigin(0).setInteractive();
+                if (_debug == true) {
+                    this.setFillStyle(0xFF0000, 0.5);
+                } else {
+                    this.setFillStyle(0x6666ff, 0);
+                }
+                scene.add.existing(this);
+                this.on(
+                    "pointerdown",
+                    () => {
+                        doGoal();
+                    },
+                    scene);
+            }
+        }
+
+        class timeBar extends Phaser.GameObjects.Rectangle {
+            constructor(scene, x, y) {
+                super(scene, x, y, 700, 20, 0xFF0000).setOrigin(0);
+                scene.add.existing(this);
+                this.time = 0;
+                this.barWidth = 700;
+                this.remainValue = 100.0;
+                this.cntTime = 0;
+            }
+            preUpdate() {
+                if (this.remainValue >= 0 && bGame == true) {
+                    this.cntTime = (this.cntTime + 1) % 2;
+                    if (this.cntTime == 0) {
+                        this.remainValue = this.remainValue - 0.5;
+                        let val = parseInt(this.barWidth * this.remainValue / 100.0);
+                        this.width = val;
+                    }
+                }
+            }
+        }
+
+        class titleScene extends Phaser.Scene {
+            constructor() {
+                super({ key: "titleScene", active: true });
+            }
+            preload() {
+                this.load.image("bg000", "./title.png");
+            }
+            create() {
+                currentScene = this;
+                var bg001 = this.add
+                    .tileSprite(0, 0, gameWidth, gameHeight, 'bg000')
+                    .setOrigin(0)
+                    .setScrollFactor(0);
+
+                //                let text = this.add
+                //                    .text(150, 100, "Pizza Delivery")
+                //                    .setFontSize(46)
+                //                    .setColor("#0");
+
+                clickButton = this.add
+                    .text(100, 400, "START TO CLICK")
+                    .setStroke("#0000ff", 4)
+                    .setBackgroundColor("#ddbcff")
+                    .setFontSize("60px")
+                    .setColor("#0f0")
+                    .setInteractive();
+                clickButton.on(
+                    "pointerdown",
+                    () => {
+                        this.scene.start("stageSelectScene");
+                    },
+                    this);
+                this.tweens.add({
+                    targets: clickButton,
+                    alpha: 0.5,
+                    ease: 'Cubic.easeOut',
+                    duration: 500,
+                    repeat: -1,
+                    yoyo: true
+                });
+            }
+        }
+
+        class stageSelectScene extends Phaser.Scene {
+            constructor() {
+                super({ key: "stageSelectScene", active: false });
+            }
+            preload() {
+                this.load.spritesheet("stageIcon", "./stage_icon.png", {
+                    frameWidth: 150,
+                    frameHeight: 150
+                });
+            }
+            create() {
+                currentScene = this;
+                let text = this.add
+                    .text(150, 50, "Stage Select")
+                    .setFontSize(46)
+                    .setColor("#0");
+
+                localforage.getItem("diffPointStageUnlock", function (err, value) {
+                    if (value != null) {
+                        var maxLen = stageLocks.length;
+                        if (stageLocks.length > value.length) {
+                            maxLen = value.length;
+                        }
+
+                        for (var i = 0; i < maxLen; i++) {
+                            if (stageLocks[i] == 1 && value[i] == 0) {
+                                stageLocks[i] = 0;
+                            }
+                        }
+                    }
+
+                    var stageButtons = [];
+                    for (var nLoop = 0; nLoop < stageLocks.length; nLoop++) {
+                        let posX = (nLoop % 3);
+                        let posY = parseInt(nLoop / 3);
+                        stageButtons.push(currentScene.add.sprite(100 + posX * 250, 200 + posY * 300, "stageIcon"));
+                        stageButtons[stageButtons.length - 1].setInteractive();
+                        stageButtons[stageButtons.length - 1].stageNo = (nLoop + 1);
+                        stageButtons[stageButtons.length - 1].stageName = "gameScene" + (nLoop + 1);
+                        let text = currentScene.add
+                            .text(25 + posX * 250, 280 + posY * 300, "Level " + (nLoop + 1))
+                            .setFontSize(40)
+                            .setColor("#0");
+
+                        stageButtons[stageButtons.length - 1].setFrame(1);
+                        if (stageLocks[nLoop] == 0) {
+                            stageButtons[stageButtons.length - 1].setFrame(0);
+                            stageButtons[stageButtons.length - 1].on("pointerdown", function (pointer) {
+                                currentScene.scene.start(this.stageName);
+                            });
+                        } else if (stageLocks[nLoop] == -1) {
+                            text.text = " 準備中";
+                            stageButtons[stageButtons.length - 1].setFrame(2);
+                        }
+                    }
+
+                });
+            }
+        }
+
+        class gameScene1 extends Phaser.Scene {
+            constructor() {
+                super({ key: "gameScene1", active: false });
+            }
+            preload() {
+                this.load.image("bg001_01", "./stage1_01.jpg");
+                this.load.image("bg001_02", "./stage1_02.jpg");
+            }
+            create() {
+                currentScene = this;
+                currentStageNo = 1;
+                startChange("bg001_02", "bg001_01");
+                initScene();
+            }
+            update() {
+                doGameOverCheck();
+            }
+        }
+
+        class gameScene2 extends Phaser.Scene {
+            constructor() {
+                super({ key: "gameScene2", active: false });
+            }
+            preload() {
+                this.load.image("bg002_01", "./stage2_01.jpg");
+                this.load.image("bg002_02", "./stage2_02.jpg");
+            }
+            create() {
+                currentScene = this;
+                currentStageNo = 2;
+                startChange("bg002_02", "bg002_01");
+                initScene();
+            }
+            update() {
+                doGameOverCheck();
+            }
+        }
+
+        class gameScene3 extends Phaser.Scene {
+            constructor() {
+                super({ key: "gameScene3", active: false });
+            }
+            preload() {
+                this.load.image("bg003_01", "./stage3_01.jpg");
+                this.load.image("bg003_02", "./stage3_02.jpg");
+            }
+            create() {
+                currentScene = this;
+                currentStageNo = 3;
+                startChange("bg003_02", "bg003_01");
+                initScene();
+            }
+            update() {
+                doGameOverCheck();
+            }
+        }
+
+
+
+
+
+        var config = {
+            type: Phaser.AUTO,
+            width: gameWidth,
+            height: gameHeight,
+            input: {
+                activePointers: 10 //Max enable of multi touch Points(1-10)
+            },
+            backgroundColor: "#eaffff",
+            autoResize: true,
+            physics: {
+                default: "matter",
+                matter: {
+                    gravity: {
+                        x: 0, y: 0
+                    },
+                    debug: true
+                }
+            },
+            scale: {
+                mode: Phaser.Scale.FIT,
+                autoCenter: Phaser.Scale.CENTER_BOTH,
+            },
+            parent: 'game',
+            audio: { disableWebAudio: true },
+            scene: [titleScene, stageSelectScene, gameScene1, gameScene2, gameScene3]
+        }
+        var game = new Phaser.Game(config);
+
+    </script>
+</body>
+
+</html>
