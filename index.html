@@ -60,7 +60,7 @@
         var currentScene = null;
 
         var bGame = false;
-        var stageLocks = [0, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1];
+        var stageLocks = [0, 1, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1];
         var currentStageNo = 0;
 
         var currentAreaX = 0, currentAreaY = 0, currentAreaW = 0, currentAreaH = 0;
@@ -220,6 +220,13 @@
                     currentAreaW = 80;
                     currentAreaH = 40;
                     //currentAnsArea = new answerArea(currentScene, 560, 770, 80, 40, bDebugFlag);
+                    break;
+                    case 6://Stage4 Answer Area
+                    currentAreaX = 560;
+                    currentAreaY = 770;
+                    currentAreaW = 80;
+                    currentAreaH = 40;
+                    currentAnsArea = new answerArea(currentScene, 560, 770, 80, 40, bDebugFlag);
                     break;
 
             }
