@@ -47,13 +47,12 @@
             src: ['clear.mp3']
         });
 
-
-        var seShoot = new Howl({
-            src: ['shoot.mp3']
+        var seBoo = new Howl({
+            src: ['boo.mp3']
         });
 
 
-        var bDebugFlag = false;
+        var bDebugFlag = true;
         var bgObject, changingText, bgTween, currentTimeBar, currentAnsArea;
         var btnReturn, clickButton;
         var gameWidth = 720;
@@ -61,18 +60,24 @@
         var currentScene = null;
 
         var bGame = false;
-        var stageLocks = [0, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1];
+        var stageLocks = [0, 1, 1, 1, 1, 1, -1, -1, -1, -1, -1, -1];
         var currentStageNo = 0;
 
-        function doGameOver() {
-            bGame = false;
-            if (bgm != null) {
-                bgm.stop();
+        var currentAreaX = 0, currentAreaY = 0, currentAreaW = 0, currentAreaH = 0;
+        function doGameOverCheck() {
+            if (bGame == true) {
+                if (currentTimeBar.remainValue <= 0) {
+                    bGame = false;
+                    if (bgm != null) {
+                        bgm.stop();
+                    }
+                    staticText.text = "   GAME OVER   ";
+                    btnReturn.visible = true;
+                    bgmOver.play();
+                }
             }
-            staticText.text = "   GAME OVER   ";
-            btnReturn.visible = true;
-            bgmOver.play();
         }
+
 
         function doGoal() {
             if (bGame == true) {
@@ -105,18 +110,16 @@
             }
         }
 
-        
+
         function startChange(_src, _dst) {
             currentScene.add
                 .tileSprite(0, 0, gameWidth, gameHeight, _src)
                 .setOrigin(0)
                 .setScrollFactor(0);
-
             bgObject = currentScene.add
                 .tileSprite(0, 0, gameWidth, gameHeight, _dst)
                 .setOrigin(0)
                 .setScrollFactor(0);
-
             bgTween = currentScene.tweens.add({
                 targets: bgObject,
                 alpha: { from: 0, to: 1 },
@@ -126,7 +129,6 @@
                 repeat: 0,
                 yoyo: false
             });
-
             changingText = currentScene.add
                 .text(100, 100, "Now Changing....")
                 .setStroke("#0000ff", 4)
@@ -141,7 +143,6 @@
                 repeat: -1,
                 yoyo: true
             });
-
             staticText = currentScene.add
                 .text(100, 100, "Touch different!")
                 .setStroke("#AAAA00", 4)
@@ -149,16 +150,10 @@
                 .setFontSize("60px")
                 .setColor("#AAAA00");
             staticText.visible = false;
-
         }
 
-        function initScene() {
-            txtEnding = currentScene.add
-                .text(200, 100, "")
-                .setScrollFactor(0)
-                .setFontSize(46)
-                .setColor("#ff0");
-
+        function initGameFunc(_stageNo) {
+            currentStageNo = _stageNo;
             btnReturn = currentScene.add
                 .text(gameWidth / 2 - 100, 400, " BACK ")
                 .setScrollFactor(0)
@@ -185,26 +180,67 @@
             }
             switch (currentStageNo) {
                 case 1://Stage1 Answer Area
-                    currentAnsArea = new answerArea(currentScene, 180, 500, 80, 80, bDebugFlag);
+                    currentAreaX = 180;
+                    currentAreaY = 500;
+                    currentAreaW = 80;
+                    currentAreaH = 80;
+                    //currentAnsArea = new answerArea(currentScene, 180, 500, 80, 80, bDebugFlag);
                     break;
                 case 2://Stage2 Answer Area
-                    currentAnsArea = new answerArea(currentScene, 660, 600, 80, 70, bDebugFlag);
+                    currentAreaX = 660;
+                    currentAreaY = 600;
+                    currentAreaW = 80;
+                    currentAreaH = 70;
+                    //currentAnsArea = new answerArea(currentScene, 660, 600, 80, 70, bDebugFlag);
                     break;
                 case 3://Stage3 Answer Area
-                    currentAnsArea = new answerArea(currentScene, 620, 1130, 80, 70, bDebugFlag);
+                    currentAreaX = 620;
+                    currentAreaY = 1130;
+                    currentAreaW = 80;
+                    currentAreaH = 70;
+                    //currentAnsArea = new answerArea(currentScene, 620, 1130, 80, 70, bDebugFlag);
                     break;
-            }
-        }
+                case 4://Stage4 Answer Area
+                    currentAreaX = 200;
+                    currentAreaY = 55;
+                    currentAreaW = 80;
+                    currentAreaH = 40;
+                    //currentAnsArea = new answerArea(currentScene, 200, 55, 80, 40, bDebugFlag);
+                    break;
+                case 5://Stage4 Answer Area
+                    currentAreaX = 460;
+                    currentAreaY = 280;
+                    currentAreaW = 35;
+                    currentAreaH = 65;
+                    //currentAnsArea = new answerArea(currentScene, 460, 280, 35, 65, bDebugFlag);
+                    break;
+                case 6://Stage4 Answer Area
+                    currentAreaX = 560;
+                    currentAreaY = 770;
+                    currentAreaW = 80;
+                    currentAreaH = 40;
+                    //currentAnsArea = new answerArea(currentScene, 560, 770, 80, 40, bDebugFlag);
+                    break;
 
-        function doGameOverCheck() {
-            if (bGame == true) {
-                if (currentTimeBar.remainValue == 0) {
-                    doGameOver();
+            }
+            currentScene.input.on('pointerdown', function (pointer) {
+                var touchX = pointer.x;
+                var touchY = pointer.y;
+                console.log("X=" + touchX + ",Y=" + touchY);
+                if (bGame == true) {
+                    if (currentAreaX <= touchX && (currentAreaX + currentAreaW) >= touchX
+                        && currentAreaY <= touchY && (currentAreaY + currentAreaH) >= touchY) {
+                        doGoal();
+                    } else {
+                        currentTimeBar.remainValue = currentTimeBar.remainValue - 10;
+                        if (currentTimeBar.remainValue <= 0) {
+                            currentTimeBar.remainValue = 0.0;
+                        }
+                        seBoo.play();
+                    }
                 }
-            }
+            });
         }
-
-
         class answerArea extends Phaser.GameObjects.Rectangle {
             constructor(scene, x, y, _width, _height, _debug) {
                 super(scene, x, y, _width, _height, 0x6666ff).setOrigin(0).setInteractive();
@@ -237,6 +273,9 @@
                     this.cntTime = (this.cntTime + 1) % 2;
                     if (this.cntTime == 0) {
                         this.remainValue = this.remainValue - 0.5;
+                        if (this.remainValue < 0.0) {
+                            this.remainValue = 0.0;
+                        }
                         let val = parseInt(this.barWidth * this.remainValue / 100.0);
                         this.width = val;
                     }
@@ -310,7 +349,6 @@
                         if (stageLocks.length > value.length) {
                             maxLen = value.length;
                         }
-
                         for (var i = 0; i < maxLen; i++) {
                             if (stageLocks[i] == 1 && value[i] == 0) {
                                 stageLocks[i] = 0;
@@ -330,81 +368,39 @@
                             .text(25 + posX * 250, 280 + posY * 300, "Level " + (nLoop + 1))
                             .setFontSize(40)
                             .setColor("#0");
-
                         stageButtons[stageButtons.length - 1].setFrame(1);
                         if (stageLocks[nLoop] == 0) {
                             stageButtons[stageButtons.length - 1].setFrame(0);
                             stageButtons[stageButtons.length - 1].on("pointerdown", function (pointer) {
-                                currentScene.scene.start(this.stageName);
+                                currentStageNo = this.stageNo;
+                                currentScene.scene.start("gameScene");
                             });
                         } else if (stageLocks[nLoop] == -1) {
                             text.text = " 準備中";
                             stageButtons[stageButtons.length - 1].setFrame(2);
                         }
                     }
-
                 });
             }
         }
 
-        class gameScene1 extends Phaser.Scene {
+        class gameScene extends Phaser.Scene {
             constructor() {
-                super({ key: "gameScene1", active: false });
+                super({ key: "gameScene", active: false });
             }
             preload() {
-                this.load.image("bg001_01", "./stage1_01.jpg");
-                this.load.image("bg001_02", "./stage1_02.jpg");
+                this.load.image("bg" + currentStageNo + "_01", "./stage" + currentStageNo + "_01.jpg");
+                this.load.image("bg" + currentStageNo + "_02", "./stage" + currentStageNo + "_02.jpg");
             }
             create() {
                 currentScene = this;
-                currentStageNo = 1;
-                startChange("bg001_02", "bg001_01");
-                initScene();
+                startChange("bg" + currentStageNo + "_01", "bg" + currentStageNo + "_02");
+                initGameFunc(currentStageNo);
             }
             update() {
                 doGameOverCheck();
             }
         }
-
-        class gameScene2 extends Phaser.Scene {
-            constructor() {
-                super({ key: "gameScene2", active: false });
-            }
-            preload() {
-                this.load.image("bg002_01", "./stage2_01.jpg");
-                this.load.image("bg002_02", "./stage2_02.jpg");
-            }
-            create() {
-                currentScene = this;
-                currentStageNo = 2;
-                startChange("bg002_02", "bg002_01");
-                initScene();
-            }
-            update() {
-                doGameOverCheck();
-            }
-        }
-
-        class gameScene3 extends Phaser.Scene {
-            constructor() {
-                super({ key: "gameScene3", active: false });
-            }
-            preload() {
-                this.load.image("bg003_01", "./stage3_01.jpg");
-                this.load.image("bg003_02", "./stage3_02.jpg");
-            }
-            create() {
-                currentScene = this;
-                currentStageNo = 3;
-                startChange("bg003_02", "bg003_01");
-                initScene();
-            }
-            update() {
-                doGameOverCheck();
-            }
-        }
-
-
 
 
 
@@ -432,7 +428,7 @@
             },
             parent: 'game',
             audio: { disableWebAudio: true },
-            scene: [titleScene, stageSelectScene, gameScene1, gameScene2, gameScene3]
+            scene: [titleScene, stageSelectScene, gameScene]
         }
         var game = new Phaser.Game(config);
 
